@@ -2,7 +2,8 @@
 
 from pprint import pprint
 import os, time, sys
-import requests
+#import requests
+from requests import Session
 import json
 
 MAX_RETRIES = 5
@@ -10,6 +11,14 @@ MAX_RETRIES = 5
 api_key = os.environ['MERAKI_API_KEY']
 apiVersion = 'v1'
 baseURL = 'https://api.meraki.com/api/'+apiVersion
+
+class NoRebuildAuthSession(Session):
+ def rebuild_auth(self, prepared_request, response):
+   '''
+   No code here means requests will always preserve the Authorization header when redirected.
+   Be careful not to leak your credentials to untrusted hosts!
+   '''
+session = NoRebuildAuthSession()
 
 # Claim devices into Organization inventory
 def claimDevicesFromOrder(orgID,orderNo):
@@ -21,33 +30,33 @@ def claimDevicesFromOrder(orgID,orderNo):
 
 # Adds Admin to Organization with full access
 def addAdminToOrg(orgID,name,email,orgAccess='full'):
-    meraki_post(f'/organizations/{orgID}/admins',
+    r = meraki_post(f'/organizations/{orgID}/admins',
         payload = {
             'email': email,
             'name': name,
-            'orgAccess': orgAccess
+            'orgAccess': orgAccess,
         }
     )
-    print(f'Admin {name!r} added successfully.')
+    print(f'Admin {json.loads(r.content)["name"]} added successfully.')
 # Creates organisation, and returns OrgID
 def createOrg(orgName): 
-    r = meraki_post(f'/organization',
+    r = meraki_post(f'/organizations',
         payload = {
             'name': orgName,
         }
     )
-    print('Organisation created succesfully.')
-    return r.headers["id"]
+    print(f'Organisation {json.loads(r.content)["id"]} created succesfully.')
+    return json.loads(r.content)["id"]
 
 def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
     for _ in range(max_retries):   
-        r = requests.post(
+        r = session.post(
             baseURL+sub_url,
             headers={
-                'X-Cisco-Meraki-API-Key': api_key,
-                'Content-Type': 'application/json'
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
             },
-            data=json.dumps(payload)
+            json=payload
         )
         if r.status_code == 201:
             return r
