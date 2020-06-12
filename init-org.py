@@ -22,11 +22,12 @@ session = NoRebuildAuthSession()
 
 # Claim devices into Organization inventory
 def claimDevicesFromOrder(orgID,orderNo):
-    meraki_post(f'/organizations/{orgID}/claim',
+    r = meraki_post(f'/organizations/{orgID}/claim',
         payload = {
             'orders': orderNo,
         }
     )
+    print(f'Meraki Order {json.loads(r.content['orders'])} claimed successfully.')
 
 # Adds Admin to Organization with full access
 def addAdminToOrg(orgID,name,email,orgAccess='full'):
@@ -76,7 +77,15 @@ def main():
     email = input('Email of Admin: ')
     addAdminToOrg(orgID,name,email)
     print()
-    #claimDevicesFromOrder(orgID,input('Enter Meraki Order no: '))
-
+    merakiOrderNo = True
+    while (merakiOrderNo):
+        claimDevicesFromOrder(orgID,input('Enter a single Meraki Order no: '))
+        ans = input("Do you have more Orders?[y/n]: ")
+        if ans == "nN":
+            return 0
+        else:
+            merakiOrderNo = False
+    print(f'Customer has been created in Meraki Dashboard')
+    
 if __name__ == "__main__":
     main()
