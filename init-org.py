@@ -3,21 +3,26 @@
 from pprint import pprint
 import os, time, sys
 import requests
+import json
 
 MAX_RETRIES = 5
 
 api_key = os.environ['MERAKI_API_KEY']
 apiVersion = 'v1'
-baseURL = 'https://elera.dl/api.meraki.com/api/'+apiVersion
+baseURL = 'https://api.meraki.com/api/'+apiVersion
 
 # Claim devices into Organization inventory
 def claimDevicesFromOrder(orgID,orderNo):
-    ...
+    meraki_post(f'/organizations/{orgID}/claim',
+        payload = {
+            'orders': orderNo,
+        }
+    )
 
 # Adds Admin to Organization with full access
 def addAdminToOrg(orgID,name,email,orgAccess='full'):
     meraki_post(f'/organizations/{orgID}/admins',
-        data = {
+        payload = {
             'email': email,
             'name': name,
             'orgAccess': orgAccess
@@ -27,14 +32,14 @@ def addAdminToOrg(orgID,name,email,orgAccess='full'):
 # Creates organisation, and returns OrgID
 def createOrg(orgName): 
     r = meraki_post(f'/organization',
-        data={
+        payload = {
             'name': orgName,
         }
     )
     print('Organisation created succesfully.')
     return r.headers["id"]
 
-def meraki_post(sub_url, data, max_retries=MAX_RETRIES):
+def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
     for _ in range(max_retries):   
         r = requests.post(
             baseURL+sub_url,
@@ -42,7 +47,7 @@ def meraki_post(sub_url, data, max_retries=MAX_RETRIES):
                 'X-Cisco-Meraki-API-Key': api_key,
                 'Content-Type': 'application/json'
             },
-            data=data
+            data=json.dumps(payload)
         )
         if r.status_code == 201:
             return r
@@ -57,12 +62,12 @@ def meraki_post(sub_url, data, max_retries=MAX_RETRIES):
 # Main routine function
 def main():
     orgID = createOrg(input('Name of Organisation: '))
-
+    print()
     name = input('Name of Admin: ')
     email = input('Email of Admin: ')
     addAdminToOrg(orgID,name,email)
-
-    claimDevicesFromOrder(orgID,input('Enter Meraki Order no: '))
+    print()
+    #claimDevicesFromOrder(orgID,input('Enter Meraki Order no: '))
 
 if __name__ == "__main__":
     main()
