@@ -63,5 +63,6 @@ def main():
     addAdminToOrg(orgID,name,email)
 
     claimDevicesFromOrder(orgID,input('Enter Meraki Order no: '))
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
