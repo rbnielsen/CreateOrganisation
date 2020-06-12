@@ -11,7 +11,8 @@ apiVersion = "v1"
 baseURL = "https://api.meraki.com/api/"+apiVersion
 
 # Claim devices into Organization inventory
-def claimDevicesFromOrder():
+def claimDevicesFromOrder(orgID,orderNo):
+    ...
 
 # Adds Admin to Organization with full access
 def addAdminToOrg(orgID,name,email,orgAccess="full"):
@@ -19,7 +20,7 @@ def addAdminToOrg(orgID,name,email,orgAccess="full"):
         r = requests.post(
             baseURL+"/organizations/"+orgID+"/admins",
             headers = {
-                "X-Cisco-Meraki-API-Key": env_user.MERAKI_API_KEY,
+                "X-Cisco-Meraki-API-Key": api_key,
                 "Content-Type": "application/json"
             },
             data = {
@@ -31,12 +32,11 @@ def addAdminToOrg(orgID,name,email,orgAccess="full"):
         if r.status_code == 201:
             pprint("Admin '"+name+"' added successfully.\n")
             return 0
-        elif = r.status_code == 429:
+        elif r.status_code == 429:
             pprint("Rate limited activated - Retry after "+r.headers["Retry-After"]+".\n")
             time.sleep(int(r.headers["Retry-After"]))
         else:
             pprint(r.status_code)
-            raise
     except Exception as e:
         pprint(e)
 
@@ -57,14 +57,13 @@ def createOrg(orgName):
             },
         )
         if r.status_code == 200:
-            pprint("Organisation created succesfully.\n")
+            print("Organisation created succesfully.\n")
             return r.headers["id"]
         elif r.status_code == 429:
-            pprint("Rate limited activated - Retry after "+r.headers["Retry-After"]+".\n")
+            print("Rate limited activated - Retry after "+r.headers["Retry-After"]+".\n")
             time.sleep(int(r.headers["Retry-After"]))
         else: 
             pprint(r.status_code)
-            raise
     except Exception as e:
         pprint(e)
 
