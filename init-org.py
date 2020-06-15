@@ -2,6 +2,7 @@
 
 from pprint import pprint
 import os, time, sys
+import getopt
 #import requests
 from requests import Session
 import json
@@ -27,7 +28,7 @@ def claimDevicesFromOrder(orgID,orderNo):
             'orders': orderNo,
         }
     )
-    print(f'Meraki Order {json.loads(r.content['orders'])} claimed successfully.')
+    print(f'Meraki Order {json.loads(r.content["orders"])} claimed successfully.')
 
 # Adds Admin to Organization with full access
 def addAdminToOrg(orgID,name,email,orgAccess='full'):
@@ -70,7 +71,19 @@ def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
     raise SystemExit('Aborted due to too many retries')
     
 # Main routine function
-def main():
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv, "h:k", ["key="])
+    except getopt.GetoptError:
+        print("init.org.py -k <api kay>")
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == "-h":
+            print("init.org.py -k <api kay>")
+            sys.exit()
+        elif opt in ("-k", "--key"):
+            global api_key = arg
+
     orgID = createOrg(input('Name of Organisation: '))
     print()
     name = input('Name of Admin: ')
@@ -88,4 +101,4 @@ def main():
     print(f'Customer has been created in Meraki Dashboard')
     
 if __name__ == "__main__":
-    main()
+    args = main(sys.argv[1:])
