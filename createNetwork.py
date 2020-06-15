@@ -45,7 +45,7 @@ def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
 
 def meraki_get(p_sub_url, p_orgID, max_retries=MAX_RETRIES):
     for _ in range(max_retries):   
-        r = session.post(
+        r = session.get(
             baseURL+p_sub_url,
             headers={
                 'Authorization': f'Bearer {api_key}',
@@ -75,7 +75,8 @@ def GetNetworkList(p_orgID):
                     }
                 )
                 if networks.status_code == 200:
-                    with open('networks.txt','w') as nwlist:
+                    print(networks)
+                    #with open('networks.txt','w') as nwlist:
                         #TODO: Add, orgID, nwID, Name
                         #csv_writer = csv_writer(nwlist, delimiter=',')
 
