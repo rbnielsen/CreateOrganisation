@@ -2,14 +2,16 @@
 
 from pprint import pprint
 import os, time, sys
-import getopt
+import argparse
 #import requests
 from requests import Session
 import json
 
 MAX_RETRIES = 5
 
-api_key = os.environ['MERAKI_API_KEY']
+#api_key = os.environ['MERAKI_API_KEY']
+api_key = None
+
 apiVersion = 'v1'
 baseURL = 'https://api.meraki.com/api/'+apiVersion
 
@@ -71,18 +73,16 @@ def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
     raise SystemExit('Aborted due to too many retries')
     
 # Main routine function
-def main(argv):
-    try:
-        opts, args = getopt.getopt(argv, "h:k", ["key="])
-    except getopt.GetoptError:
-        print("init.org.py -k <api kay>")
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == "-h":
-            print("init.org.py -k <api kay>")
-            sys.exit()
-        elif opt in ("-k", "--key"):
-            global api_key = arg
+def main(key): 
+    env_key = os.environ.get('MERAKI_API_KEY', None) 
+    if key is None and env_key is None:
+        raise SystemExit('Please set environment variable MERAKI_API_KEY')
+    if key is not None:
+        print('Warning: Passing a key as an argument is unsafe. Consider using the environment variable MERAKI_API_KEY instead.')
+        api_key = key
+    else:
+        api_key = env_key
+    
 
     orgID = createOrg(input('Name of Organisation: '))
     print()
@@ -100,5 +100,15 @@ def main(argv):
             merakiOrderNo = False
     print(f'Customer has been created in Meraki Dashboard')
     
+def run(args):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-k', '--key', help='Meraki API Key')
+    parser.add_argument('', '--dry-run', help='Dry-run')
+
+    options = parser.parse_args(sys.argv[1:])
+    main(**vars(options))
+
 if __name__ == "__main__":
-    args = main(sys.argv[1:])
+    #main()
+    run(sys.argv[1:])
