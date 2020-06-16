@@ -3,7 +3,7 @@
 from pprint import pprint
 import os, time, sys
 import argparse
-#import requests
+import requests
 from requests import Session
 import json
 
@@ -62,7 +62,7 @@ def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
             },
             json=payload
         )
-        if r.status_code == 201:
+        if r.status_code == requests.codes.ok:
             return r
         elif r.status_code == 429:
             print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
