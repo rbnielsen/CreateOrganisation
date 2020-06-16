@@ -73,14 +73,13 @@ def GetNetworkList(p_apiKey,p_orgID):
     if p_orgID is not None:
         for _ in range(MAX_RETRIES):
             try:
-                subUrl = baseURL+"/organizations/"+p_orgID+"/networks"
-                header =  {
+                r = session.get(
+                    baseURL+"/organizations/"+p_orgID+"/networks",
+                    headers = {
                         'Authorization': f'Bearer {p_apiKey}',
                         'Content-Type': 'application/json',
+                        "Accept": "application/json",
                     }
-                r = session.get(
-                    subUrl,
-                    headers=header
                 )
                 if r.status_code == 200:
                     return r              
@@ -94,11 +93,34 @@ def GetNetworkList(p_apiKey,p_orgID):
                 pprint(e)
                 return ""
 
+def GetOrgs(p_apiKey):
+    for _ in range(MAX_RETRIES):
+        try: 
+            r = session.get(
+                baseURL+'/organizations',
+                headers = {
+                    'Authorization': f'Bearer {p_apiKey}',
+                    'Content-Type': 'application/json',
+                    "Accept": "application/json",
+                }
+            )
+            if r.status_code == 200:
+                return r
+            elif r.status_code == 429:
+                print(f'Rate limited - Retrying after {r.headers["Retry-After"]}.')
+                time.sleep(int(r.headers['Retry-After']))
+                continue
+            else:
+                raise SystemExit(f'Unexpected status code: {r.status_code} returned from server.')
+            
+        except Exception as e:
+            pprint(e)
 
 # Main routine function
 def main(a_org_id,a_get_nw,a_create_nw): 
-    org_id = "409192"
+    #org_id = "409192"
     print(locals())
+    print()
     API_KEY = os.environ.get('MERAKI_API_KEY', None) 
     if API_KEY is None:
         raise SystemExit('Please set environment variable MERAKI_API_KEY')
@@ -106,8 +128,15 @@ def main(a_org_id,a_get_nw,a_create_nw):
         API_KEY = os.environ['MERAKI_API_KEY']
 
     if a_org_id is None:
-        raise SystemExit("Organisation ID not specified.")
-    if a_get_nw is not None:
+        org = GetOrgs(API_KEY)
+        orgjson = org.json()
+        orgs = []
+        for _ in orgjson:
+            orgs.append({_['id']: _['name']})
+        pprint(orgs)
+        return
+        #raise SystemExit("Organisation ID not specified.")
+    elif a_get_nw is not None:
         print(a_get_nw)
         r = GetNetworkList(API_KEY,org_id)
         rjson = r.json()
@@ -116,13 +145,13 @@ def main(a_org_id,a_get_nw,a_create_nw):
             for _ in rjson:
                 csvwriter.writerow([_['organizationId'],_['id'],_['name']])
 
-        #print()
         #pprint(r.json())
     elif a_create_nw is not None:
-        CreateNetworks(a_create_nw)
+        print("Network created")
+        #CreateNetworks(a_create_nw)
     else:
-        print("Default")
-        
+       print("Default")
+
 
 def run(args):
     parser = argparse.ArgumentParser()
