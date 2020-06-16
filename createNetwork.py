@@ -22,51 +22,12 @@ class NoRebuildAuthSession(Session):
    '''
 session = NoRebuildAuthSession()
 
-# def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
-#     for _ in range(max_retries):   
-#         r = session.post(
-#             baseURL+sub_url,
-#             headers={
-#                 'Authorization': f'Bearer {api_key}',
-#                 'Content-Type': 'application/json',
-#             },
-#             json=payload
-#         )
-#         if r.status_code == 201:
-#             return r
-#         elif r.status_code == 429:
-#             print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
-#             time.sleep(int(r.headers['Retry-After']))
-#             continue
-#         else: 
-#             raise SystemExit(f'Unexpected status code: {r.status_code} returned from server')
-#     raise SystemExit('Aborted due to too many retries')
-
-# def meraki_get(p_sub_url, p_orgID, max_retries=MAX_RETRIES):
-#     for _ in range(max_retries):   
-#         r = session.get(
-#             baseURL+p_sub_url,
-#             headers={
-#                 'Authorization': f'Bearer {api_key}',
-#                 'Content-Type': 'application/json',
-#             }
-#         )
-#         if r.status_code == 200:
-#             return r
-#         elif r.status_code == 429:
-#             print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
-#             time.sleep(int(r.headers['Retry-After']))
-#             continue
-#         else: 
-#             raise SystemExit(f'Unexpected status code: {r.status_code} returned from server')
-#     raise SystemExit('Aborted due to too many retries')
-
 # Write to file
 def WriteToCsvFile(p_filename,p_data):
     ...
 
 def CreateNetworks(p_filename):
-    ...
+    return 0
 
 # Get list of networks
 def GetNetworkList(p_apiKey,p_orgID):
@@ -117,8 +78,9 @@ def GetOrgs(p_apiKey):
             pprint(e)
 
 # Main routine function
-def main(a_org_id,a_get_nw,a_create_nw): 
-    #org_id = "409192"
+def main(arg_org_id,arg_get_nw,arg_create_nw): 
+    #arg_org_id = "409192" # ND Testnet
+    #arg_org_id = "785083" # Redmark
     print(locals())
     print()
     API_KEY = os.environ.get('MERAKI_API_KEY', None) 
@@ -127,39 +89,68 @@ def main(a_org_id,a_get_nw,a_create_nw):
     else:
         API_KEY = os.environ['MERAKI_API_KEY']
 
-    if a_org_id is None:
-        org = GetOrgs(API_KEY)
-        orgjson = org.json()
-        orgs = []
-        for _ in orgjson:
-            orgs.append({_['id']: _['name']})
-        pprint(orgs)
-        return
-        #raise SystemExit("Organisation ID not specified.")
-    elif a_get_nw is not None:
-        print(a_get_nw)
-        r = GetNetworkList(API_KEY,org_id)
+    if arg_org_id is not None and arg_get_nw is not None:
+        print('Getting list of ntworks...')
+        r = GetNetworkList(API_KEY,arg_org_id)
         rjson = r.json()
-        with open (a_get_nw,'w') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=',', quotechar='"')
-            for _ in rjson:
-                csvwriter.writerow([_['organizationId'],_['id'],_['name']])
+        print('Success!')
+        print(f'Writing list to {arg_get_nw}...')
+        # with open (a_get_nw,'w') as csvfile:
+        #     csvwriter = csv.writer(csvfile, delimiter=',', quotechar='"')
+        #     for _ in rjson:
+        #         csvwriter.writerow([_['organizationId'],_['id'],_['name']])
+        pprint(rjson)
+        print("Done!")
+        return
+    elif arg_org_id is not None and arg_create_nw is not None:
+        print(f'Creating networks for org id {arg_org_id}...')
+        result = CreateNetworks(arg_create_nw)
+        if result == 0:
+            print('Networks Created!')
+            return 0
+        else:
+            print(f'Error: {result}')
+            return result
 
-        #pprint(r.json())
-    elif a_create_nw is not None:
-        print("Network created")
-        #CreateNetworks(a_create_nw)
-    else:
-       print("Default")
 
+
+
+    # if a_org_id is None and a_get_nw is not None:
+    #     org = GetOrgs(API_KEY)
+    #     orgjson = org.json()
+    #     orgs = []
+    #     for _ in orgjson:
+    #         orgs.append({_['id']: _['name']})
+    #     pprint(orgs)
+    #     a_org_id = input("Please enter org id: ")
+    #     print(a_org_id)
+    #     return
+    #     #raise SystemExit("Organisation ID not specified.")
+    # if a_org_id is not None and a_get_nw is None:
+    #     print(a_get_nw)
+    #     r = GetNetworkList(API_KEY,a_org_id)
+    #     rjson = r.json()
+    #     # with open (a_get_nw,'w') as csvfile:
+    #     #     csvwriter = csv.writer(csvfile, delimiter=',', quotechar='"')
+    #     #     for _ in rjson:
+    #     #         csvwriter.writerow([_['organizationId'],_['id'],_['name']])
+    #     pprint(rjson)
+    #     return
+    # if a_org_id is not None and a_get_nw is not None:
+    #     print("HEY")
+    # if a_org_id is not None and a_create_nw is not None:
+    #     print("Network created")
+    #     #CreateNetworks(a_create_nw)
+    #     return
+    
 
 def run(args):
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
 
-    parser.add_argument('-o', '--org-id', dest='a_org_id', help='Set the Organisation ID')
-    group.add_argument('-n', '--get-networks', dest='a_get_nw', help='Get Networks')
-    group.add_argument('-c', '--create-networks', dest='a_create_nw', help='Get Networks')
+    parser.add_argument('-o', '--org-id', dest='arg_org_id', help='Set the Organisation ID')
+    group.add_argument('-n', '--get-networks', dest='arg_get_nw', help='Get Networks')
+    group.add_argument('-c', '--create-networks', dest='arg_create_nw', help='Get Networks')
     
     options = parser.parse_args(sys.argv[1:])
     main(**vars(options))
