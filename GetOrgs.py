@@ -23,7 +23,8 @@ class NoRebuildAuthSession(Session):
         '''
 session = NoRebuildAuthSession()
 
-def GetOrgs(p_apiKey):
+def GetOrgs(p_apiKey,p_orgid=None):
+    #TODO: Take care of non-None type p_orgid
     orgs = None
 
     try: 
@@ -38,10 +39,12 @@ def GetOrgs(p_apiKey):
         )
         if orgs.status_code != req.codes.ok:
             return None
-        orgs = orgs.json()
-        for _ in orgs:
-            return _['id']
-        
+        orgsjson = orgs.json()
+        #pprint(orgsjson)
+        orgs = []
+        for _ in orgsjson:
+            orgs.append({_['id']: _['name']})
+        return orgs
     except Exception as e:
         pprint(e)
 
@@ -57,7 +60,11 @@ def main(org_id):
 
     if org_id is None:
         org = GetOrgs(API_KEY)
-        print(org)
+        #print(org)
+    else:
+        org = GetOrgs(API_KEY,org_id)
+    print(org)
+
 
 
     #print(locals())
