@@ -3,14 +3,13 @@
 from pprint import pprint
 import os, time, sys
 import argparse
-#import requests
+import requests
 from requests import Session
 import json
+import csv
 
 MAX_RETRIES = 5
-
-#api_key = os.environ['MERAKI_API_KEY']
-api_key = None
+API_KEY = None
 
 apiVersion = 'v1'
 baseURL = 'https://api.meraki.com/api/'+apiVersion
@@ -23,65 +22,69 @@ class NoRebuildAuthSession(Session):
    '''
 session = NoRebuildAuthSession()
 
-def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
-    for _ in range(max_retries):   
-        r = session.post(
-            baseURL+sub_url,
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-            },
-            json=payload
-        )
-        if r.status_code == 201:
-            return r
-        elif r.status_code == 429:
-            print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
-            time.sleep(int(r.headers['Retry-After']))
-            continue
-        else: 
-            raise SystemExit(f'Unexpected status code: {r.status_code} returned from server')
-    raise SystemExit('Aborted due to too many retries')
+# def meraki_post(sub_url, payload, max_retries=MAX_RETRIES):
+#     for _ in range(max_retries):   
+#         r = session.post(
+#             baseURL+sub_url,
+#             headers={
+#                 'Authorization': f'Bearer {api_key}',
+#                 'Content-Type': 'application/json',
+#             },
+#             json=payload
+#         )
+#         if r.status_code == 201:
+#             return r
+#         elif r.status_code == 429:
+#             print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
+#             time.sleep(int(r.headers['Retry-After']))
+#             continue
+#         else: 
+#             raise SystemExit(f'Unexpected status code: {r.status_code} returned from server')
+#     raise SystemExit('Aborted due to too many retries')
 
-def meraki_get(p_sub_url, p_orgID, max_retries=MAX_RETRIES):
-    for _ in range(max_retries):   
-        r = session.get(
-            baseURL+p_sub_url,
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-            }
-        )
-        if r.status_code == 200:
-            return r
-        elif r.status_code == 429:
-            print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
-            time.sleep(int(r.headers['Retry-After']))
-            continue
-        else: 
-            raise SystemExit(f'Unexpected status code: {r.status_code} returned from server')
-    raise SystemExit('Aborted due to too many retries')
+# def meraki_get(p_sub_url, p_orgID, max_retries=MAX_RETRIES):
+#     for _ in range(max_retries):   
+#         r = session.get(
+#             baseURL+p_sub_url,
+#             headers={
+#                 'Authorization': f'Bearer {api_key}',
+#                 'Content-Type': 'application/json',
+#             }
+#         )
+#         if r.status_code == 200:
+#             return r
+#         elif r.status_code == 429:
+#             print(f'Rate limited activated - Retrying after {r.headers["Retry-After"]}.')
+#             time.sleep(int(r.headers['Retry-After']))
+#             continue
+#         else: 
+#             raise SystemExit(f'Unexpected status code: {r.status_code} returned from server')
+#     raise SystemExit('Aborted due to too many retries')
 
-def GetNetworkList(p_orgID):
-    networks = None
+# Write to file
+def WriteToCsvFile(p_filename,p_data):
+    ...
+
+def CreateNetworks(p_filename):
+    ...
+
+# Get list of networks
+def GetNetworkList(p_apiKey,p_orgID):
     if p_orgID is not None:
-        for p_org in p_orgID:
+        for _ in range(MAX_RETRIES):
             try:
-                networks = session.get(
-                    baseURL+"/organisations/"+p_org+"/networks",
-                    headers={
-                        'Authorization': f'Bearer {api_key}',
+                subUrl = baseURL+"/organizations/"+p_orgID+"/networks"
+                header =  {
+                        'Authorization': f'Bearer {p_apiKey}',
                         'Content-Type': 'application/json',
                     }
+                r = session.get(
+                    subUrl,
+                    headers=header
                 )
-                if networks.status_code == 200:
-                    print(networks)
-                    #with open('networks.txt','w') as nwlist:
-                        #TODO: Add, orgID, nwID, Name
-                        #csv_writer = csv_writer(nwlist, delimiter=',')
-
-                    
-                elif networks.status_code == 429:
+                if r.status_code == 200:
+                    return r              
+                elif r.status_code == 429:
                     print(f'Rate limited - Retrying after {r.headers["Retry-After"]}.')
                     time.sleep(int(r.headers['Retry-After']))
                     continue
@@ -93,32 +96,44 @@ def GetNetworkList(p_orgID):
 
 
 # Main routine function
-def main(opts): 
-    env_key = os.environ.get('MERAKI_API_KEY', None) 
-    if env_key is None:
+def main(a_org_id,a_get_nw,a_create_nw): 
+    org_id = "409192"
+    print(locals())
+    API_KEY = os.environ.get('MERAKI_API_KEY', None) 
+    if API_KEY is None:
         raise SystemExit('Please set environment variable MERAKI_API_KEY')
     else:
-        api_key = env_key
+        API_KEY = os.environ['MERAKI_API_KEY']
 
-    if opts in ("-o", "--get-org-id"):
-        r = meraki_get(f'/organizations',orgID)
-        print(r)
+    if a_org_id is None:
+        raise SystemExit("Organisation ID not specified.")
+    if a_get_nw is not None:
+        print(a_get_nw)
+        r = GetNetworkList(API_KEY,org_id)
+        rjson = r.json()
+        with open (a_get_nw,'w') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',', quotechar='"')
+            for _ in rjson:
+                csvwriter.writerow([_['organizationId'],_['id'],_['name']])
+
+        #print()
+        #pprint(r.json())
+    elif a_create_nw is not None:
+        CreateNetworks(a_create_nw)
     else:
-        print("Fail")
-    
-
-
+        print("Default")
+        
 
 def run(args):
     parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
 
-    parser.add_argument('-o', '--get-org-id', help='Get the Organisation ID')
-    #parser.add_argument('-g', '--get', help='Get list of networks')
-    #parser.add_argument('-p', '--post', help='Post list of networks')
-
+    parser.add_argument('-o', '--org-id', dest='a_org_id', help='Set the Organisation ID')
+    group.add_argument('-n', '--get-networks', dest='a_get_nw', help='Get Networks')
+    group.add_argument('-c', '--create-networks', dest='a_create_nw', help='Get Networks')
+    
     options = parser.parse_args(sys.argv[1:])
     main(**vars(options))
 
 if __name__ == "__main__":
-    
     run(sys.argv[1:])
