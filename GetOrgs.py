@@ -36,7 +36,12 @@ def GetOrgs(p_apiKey):
             baseURL+'/organizations',
             headers = header
         )
-        return orgs
+        if orgs.status_code != req.codes.ok:
+            return None
+        orgs = orgs.json()
+        for _ in orgs:
+            return _['id']
+        
     except Exception as e:
         pprint(e)
 
